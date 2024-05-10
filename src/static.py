@@ -3,6 +3,7 @@ import json
 import random
 import re
 import time
+from collections import defaultdict
 from typing import Optional
 
 import lxml
@@ -161,7 +162,6 @@ class StaticScraper:
         details['num_ratings']= num_ratings
         details['overall rank'] = overall_rank
         details['subranks'] = subranks
-        #TODO: logging 
         return details
 
 
@@ -180,7 +180,6 @@ class StaticScraper:
                 kv_pairs[name] = value
             else:
                 kv_pairs[name] = "No value"
-        #TODO: logging 
         return kv_pairs
 
 
@@ -188,21 +187,47 @@ class StaticScraper:
         return self.soup.select_one('#product-summary').find('p').get_text()
 
     
+    # def get_climate_pledge_badges(self):
+    #     badges_area = self.soup.select_one('#climatePledgeFriendly')
+    #     certifications = {}
+
+    #     if badges_area:
+    #         cert_area = badges_area.findAll('span', class_='a-size-base')
+    #         certifications = {i.get_text(): None for i in cert_area}
+
+    #         if 'Cradle to Cradle Certified' in certifications:
+    #             level_element = badges_area.find('span', class_="a-size-small a-color-tertiary")
+    #             if level_element:
+    #                 level = level_element.get_text()
+    #                 certifications['Cradle to Cradle Certified'] = level
+
+    #     return certifications
+    
     def get_climate_pledge_badges(self):
-        badges_area = self.soup.select_one('#climatePledgeFriendly')
-        certifications = {}
-
+        badges_area = self.soup.select_one("#climatePledgeFriendly")
+        cert_map = defaultdict(list)
         if badges_area:
-            cert_area = badges_area.findAll('span', class_='a-size-base')
-            certifications = {i.get_text(): None for i in cert_area}
+            cert_area = badges_area.findAll("a", class_="a-size-base")
+            text_area = badges_area.findAll("span", class_="a-size-base-plus a-text-bold")
 
-            if 'Cradle to Cradle Certified' in certifications:
-                level_element = badges_area.find('span', class_="a-size-small a-color-tertiary")
-                if level_element:
-                    level = level_element.get_text()
-                    certifications['Cradle to Cradle Certified'] = level
-
-        return certifications
+            for i in range(len(text_area)):
+                cert_map[f"{text_area[i].get_text()}"] = [f"{cert_area[i].get_text()}"]
+                
+            
+            try:
+                pop_element = self.soup.find("div", id = "a-popover-CPFBottomSheet-ATF")
+                level_elements = pop_element.find_all("span", class_ = "a-size-small a-color-base")
+                cert_levels = [el.get_text() for el in level_elements]
+            except:
+                pass
+            
+            c2c_count = 0
+            for key, values in cert_map.items():
+                for value in values:
+                    if value == " Cradle to Cradle Certified ":
+                        values.append(cert_levels[c2c_count])
+                        c2c_count +=1
+        return cert_map
 
     def check_amazon_choice(self):
         return True if self.soup.find('span', class_ = "ac-badge-rectangle") else False

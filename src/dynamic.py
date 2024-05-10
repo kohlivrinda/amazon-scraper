@@ -203,6 +203,20 @@ class DynamicScraper():
                     
         await browser.close()
         return scrape_info
+    
+    def dedup_qa(self, data:list)->list:
+        """_summary_
+
+        Args:
+            data (list): QA list
+
+        Returns:
+            dedup_data(list): deduplicated QA
+        """
+        ques = set()
+        dedup_data = [i for i in data if i['question'] not in ques and not ques.add(i['question'])]
+        return dedup_data
+        
 
     async def get_product_reviews(self):
         async with async_playwright() as pw:
@@ -282,14 +296,11 @@ class DynamicScraper():
 
     async def run_dynamic_scraper(self):
         if self.needs_review:
-            print('getting reviews')
             self.product_data['Reviews'] = await self.get_product_reviews()
-        print('reviews obtained')
         try:
-            self.product_data['QA'] = await self.get_product_qa()
-            print('got qa')
+            qa = await self.get_product_qa()
+            self.product_data['QA'] = self.dedup_qa(qa)
         except:
-            #TODO: logging
             pass
         
         self.product_data['fully_scraped'] = True
