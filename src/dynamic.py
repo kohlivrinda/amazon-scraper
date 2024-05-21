@@ -27,10 +27,13 @@ class DynamicScraper():
         
         self.use_proxy = use_proxy
         
+        
         if self.use_proxy:
             self.proxy_ip = proxy_ip
             self.password = password
             self.username = username
+            
+        # self.browser = self.set_browser()
         
     # Define request retry functionality with a maximum retry limit.
     async def perform_request_with_retry(self, page, url):
@@ -294,16 +297,41 @@ class DynamicScraper():
         await browser.close()
         return scrape_info
 
+    # async def set_browser(self) -> None:
+    #     async with async_playwright() as pw:
+    #         if self.use_proxy:
+    #                 proxy = {
+    #                     'server': self.proxy_ip,
+    #                     'username': self.username,
+    #                     'password': self.password
+    #                 }
+    #                 browser = await pw.firefox.launch(proxy=proxy, headless= True)
+    #         else:
+    #             browser = await pw.firefox.launch(headless = True)
+            
+    #         browser = browser
+                
+                
     async def run_dynamic_scraper(self):
-        if self.needs_review:
+        # if self.needs_review:
+        try:
             self.product_data['Reviews'] = await self.get_product_reviews()
+        except Exception as e:
+            print (f"{e} at reviews")
+            pass
+            
         try:
             qa = await self.get_product_qa()
             self.product_data['QA'] = self.dedup_qa(qa)
-        except:
+        except Exception as e:
+            print (f"{e} at qa")
             pass
         
         self.product_data['fully_scraped'] = True
+        # try:
+        #     await browser.close()
+        # except Exception as e:
+        #     print (f"{e} at closing")
         
         return self.product_data
         
