@@ -17,7 +17,7 @@ from static import StaticScraper
 
 async def run_scraper(url):
         static_scraper = StaticScraper(url, use_proxy= True, 
-                                    proxy_ip= "http://Kpu9dCtTRAJZduml5WDAVQ@smartproxy.crawlbase.com:8012", username= "Kpu9dCtTRAJZduml5WDAVQ", password= "hu7+cpCATvgj=ZsXx", oxylabs_proxy= False
+                                    proxy_ip= "in-pr.oxylabs.io:20000", username= "Ben123456", password= "hu7+cpCATvgj=ZsXx", oxylabs_proxy= False
                                     )
         #INITIALIZE WIRH PROXY PARAMS AND CREDENTIALS IF USING PROXY
         await static_scraper.initialize()
@@ -26,7 +26,7 @@ async def run_scraper(url):
         print(json.dumps(static_scraped_data, indent = 4))
         
         dynamic_scraper = DynamicScraper(url, product_data= static_scraped_data, use_proxy= True, 
-                                        proxy_ip= "smartproxy.crawlbase.com:8012", username= "Kpu9dCtTRAJZduml5WDAVQ", password= "hu7+cpCATvgj=ZsXx"
+                                        proxy_ip= "in-pr.oxylabs.io:20000", username= "Ben123456", password= "hu7+cpCATvgj=ZsXx"
                                         )
         #INITIALIZE WIRH PROXY PARAMS AND CREDENTIALS IF USING PROXY
         
