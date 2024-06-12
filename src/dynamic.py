@@ -18,7 +18,8 @@ class DynamicScraper():
                 use_proxy: bool, 
                 proxy_ip: Optional[str] = None, 
                 username: Optional[str] = None, 
-                password: Optional[str] = None):
+                password: Optional[str] = None,
+                country_code: Optional[str] = None):
         
         self.url = url
         self.product_data = product_data
@@ -32,8 +33,9 @@ class DynamicScraper():
             self.proxy_ip = proxy_ip
             self.password = password
             self.username = username
+            self.country_code = country_code
             
-        # self.browser = self.set_browser()
+        # self.browser = None
         
     # Define request retry functionality with a maximum retry limit.
     async def perform_request_with_retry(self, page, url):
@@ -65,6 +67,7 @@ class DynamicScraper():
             if self.use_proxy:
                 proxy = {
                     'server': self.proxy_ip,
+                    # 'username': f'{self.username}-cc-{self.country_code}',
                     'username': self.username,
                     'password': self.password
                 }
@@ -105,13 +108,14 @@ class DynamicScraper():
             if self.use_proxy:
                 proxy = {
                     'server': self.proxy_ip,
+                    # 'username': f'{self.username}-cc-{self.country_code}',
                     'username': self.username,
                     'password': self.password
                 }
                 browser = await pw.firefox.launch(proxy=proxy, headless= True)
             else:
                 browser = await pw.firefox.launch(headless = True)
-            # browser = await pw.firefox.launch(headless=True)
+            browser = await pw.firefox.launch(headless=True)
             page = await browser.new_page()
             await self.perform_request_with_retry(page, qa_url)
 
@@ -226,6 +230,7 @@ class DynamicScraper():
             if self.use_proxy:
                 proxy = {
                     'server': self.proxy_ip,
+                    # 'username': f'{self.username}-cc-{self.country_code}',
                     'username': self.username,
                     'password': self.password
                 }
@@ -297,35 +302,48 @@ class DynamicScraper():
         await browser.close()
         return scrape_info
 
-    # async def set_browser(self) -> None:
-    #     async with async_playwright() as pw:
-    #         if self.use_proxy:
-    #                 proxy = {
-    #                     'server': self.proxy_ip,
-    #                     'username': self.username,
-    #                     'password': self.password
-    #                 }
-    #                 browser = await pw.firefox.launch(proxy=proxy, headless= True)
-    #         else:
-    #             browser = await pw.firefox.launch(headless = True)
+    async def set_browser(self) -> None:
+        async with async_playwright() as pw:
+            if self.use_proxy:
+                    proxy = {
+                        'server': self.proxy_ip,
+                        # 'username': f'{self.username}-cc-{self.country_code}',
+                        'username': self.username,
+                        'password': self.password
+                    }
+                    browser = await pw.firefox.launch(proxy=proxy, headless= True)
+            else:
+                browser = await pw.firefox.launch(headless = True)
             
-    #         browser = browser
+            browser = browser
                 
                 
     async def run_dynamic_scraper(self):
-        # if self.needs_review:
+        #TODO: account for no reviews/ no qa cases
+        
         try:
             self.product_data['Reviews'] = await self.get_product_reviews()
-        except Exception as e:
-            print (f"{e} at reviews")
-            pass
+        except:
+            try:
+                self.use_proxy = not self.use_proxy
+                self.product_data['Reviews'] = await self.get_product_reviews()
+            except Exception as e:
+                print (f"{e} at reviews")
+                pass
             
         try:
             qa = await self.get_product_qa()
             self.product_data['QA'] = self.dedup_qa(qa)
-        except Exception as e:
-            print (f"{e} at qa")
-            pass
+        except :
+            try:
+                self.use_proxy = not self.use_proxy
+                qa = await self.get_product_qa()
+                self.product_data['QA'] = self.dedup_qa(qa)
+            except Exception as e:
+                
+                #TODO: SWITCH
+                print (f"{e} at qa")
+                pass
         
         self.product_data['fully_scraped'] = True
         # try:

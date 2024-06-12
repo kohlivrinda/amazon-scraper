@@ -18,7 +18,9 @@ class StaticScraper:
                     use_proxy: bool, 
                     proxy_ip: Optional[str] = None, 
                     username: Optional[str] = None, 
-                    password: Optional[str] = None):
+                    password: Optional[str] = None,
+                    oxylabs_proxy: Optional[bool] = True,
+                    country_code: Optional[str] = None):
         self.url = url
         self.use_proxy = use_proxy
         
@@ -26,6 +28,8 @@ class StaticScraper:
             self.proxy_ip = proxy_ip
             self.password = password
             self.username = username
+            self.country_code = country_code
+            self.oxylabs = oxylabs_proxy
         
     async def initialize(self):
         self.soup = await self.get_soup() 
@@ -39,12 +43,21 @@ class StaticScraper:
             try:
                 async with async_playwright() as p:
                     if self.use_proxy:
-                        proxy = {
-                            'server': self.proxy_ip,
-                            'username': self.username,
-                            'password': self.password
-                        }
+                        if self.oxylabs:
+                            proxy = {
+                                'server': self.proxy_ip,
+                                # 'username': f'{self.username}-cc-{self.country_code}',
+                                'username': self.username,
+                                'password': self.password
+                            }
+                        else:
+                            proxy = {
+                                'server': self.proxy_ip,
+                                # 'username': self.username,
+                                # 'password': ''
+                            }
                         browser = await p.firefox.launch(proxy=proxy, headless= True)
+                        print("proxy used")
                     else:
                         browser = await p.firefox.launch(headless = True)
                     page = await browser.new_page()
@@ -67,10 +80,19 @@ class StaticScraper:
                 soup = BeautifulSoup(response_content, 'lxml')
                 return soup
             
-        except Exception as e:
-            #TODO: add better logging
-                print("An error occured:", e)
-                return None
+        except:
+            if self.use_proxy:
+                self.use_proxy = False
+                print("SWITCH")
+                try:
+                    response_content = await self.fetch_content_with_retry()
+                    if response_content:
+                        soup = BeautifulSoup(response_content, 'lxml')
+                        return soup
+                except Exception as e:
+                
+                    print("An error occured:", e)
+                    return None
             
     def get_product_name(self):
         try:
@@ -118,7 +140,7 @@ class StaticScraper:
         return result
     
     def get_product_details(self) -> dict:
-        
+        # # brand, scent, item form, ingredients, unit count
         pdt_details = self.soup.find('div', class_='a-section a-spacing-small a-spacing-top-small')
 
         if not pdt_details:
@@ -134,6 +156,7 @@ class StaticScraper:
         return table_values
 
     def get_amazon_details(self):
+                    # #package dimensions, manufacturer, ASIN, avg_rating, number of ratings, overall rank, subrankings
         details = {}
         details_section = self.soup.select_one('#detailBulletsWrapper_feature_div')
         if not details_section:
@@ -153,13 +176,16 @@ class StaticScraper:
         # overall_rank = bestsellers_rank_text.split('#')[1].split(' ')[0]
         subranks = [rank_sec.parent.find_all('span', class_ = 'a-list-item')[0].get_text()]
 
+        try:
+            num_rating_str = self.soup.select_one('#acrCustomerReviewText').get_text(strip=True)
+            cleaned_rating_string = ''.join(filter(str.isdigit, num_rating_str))
+            num_ratings = int(cleaned_rating_string)
 
-        num_rating_str = self.soup.select_one('#acrCustomerReviewText').get_text(strip=True)
-        cleaned_rating_string = ''.join(filter(str.isdigit, num_rating_str))
-        num_ratings = int(cleaned_rating_string)
-
-        details['avg_rating']=  details_section.find('span', class_= 'a-size-base a-color-base').get_text(strip= True)
-        details['num_ratings']= num_ratings
+            details['avg_rating']=  details_section.find('span', class_= 'a-size-base a-color-base').get_text(strip= True)
+            details['num_ratings']= num_ratings
+        except:
+            pass
+        
         details['overall rank'] = overall_rank
         details['subranks'] = subranks
         return details
@@ -234,12 +260,26 @@ class StaticScraper:
     
     async def run_static_scraper(self):
         product_data = {}
+        product_data['url'] = self.url
         product_data['product_name'] = self.get_product_name()
+        print("got name")
         product_data['about_items'] = self.get_about_product()
+        print("got about items")
         product_data['price'] = self.get_price_details()
+        print("got price ")
         product_data['amazon choice'] = self.check_amazon_choice()
-        product_data.update(self.get_product_details())
-        product_data.update(self.get_amazon_details())
+        print("got amazon choice")
+        try:
+            product_data.update(self.get_product_details()) #FLAG-1
+            print("got prod details")
+        except:
+            pass
+
+        try:
+            product_data.update(self.get_amazon_details()) #FLAG-2
+            print("got amazon details")
+        except:
+            pass
         
         if self.soup.select_one('#climatePledgeFriendly'):
             badges = self.get_climate_pledge_badges()
@@ -255,6 +295,7 @@ class StaticScraper:
         else:
             product_data['Needs Reviews'] = True
             #TODO: add flag logic to carry over into dynamic scraper
+            
         
         #TODO: logging
         
