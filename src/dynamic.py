@@ -63,6 +63,7 @@ class DynamicScraper():
         return(f"https://www.amazon.com/ask/questions/asin/{self.asin}/")
     
     async def scrape_question_page(self, url):
+        #TODO: USE CRAWLBASE CRAWLINGAPI
         async with async_playwright() as pw:
             if self.use_proxy:
                 proxy = {

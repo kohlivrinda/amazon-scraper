@@ -22,8 +22,8 @@ def correct_json_file(input_file, output_file):
         file.write(corrected_content)
         
 def main():
-    ORIGINAL_PATH = './outputs/dirty.json'
-    NEW_PATH = 'total_clean_data.json'
+    ORIGINAL_PATH = './outputs/test_outputs.json'
+    NEW_PATH = './outputs/test_clean_data.json'
     correct_json_file(ORIGINAL_PATH, NEW_PATH )
     a = load_json_data(NEW_PATH)
     if a:
